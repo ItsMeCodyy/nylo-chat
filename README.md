@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/cb305799-2ecc-438a-ac13-07ad6beec306
+
 # Nylo AI — Local Chat Website
 
 A Flask website at `http://127.0.0.1:5000` that uses a Selenium-controlled Chrome window to interact with the ChatGPT website. It starts the Flask website **independently** of Chrome, so a slow/broken Chrome launch does not stop the local page from loading.
