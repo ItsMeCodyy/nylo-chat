@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Nylo</title>
+  <style>
+    :root {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      color: #252525;
+      background: #fff;
+      font-synthesis: none;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; }
+    body { overflow: hidden; }
+    button, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, textarea:focus-visible { outline: 2px solid #777; outline-offset: 3px; }
+    svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .app { height: 100dvh; display: grid; grid-template-columns: 250px minmax(0, 1fr); }
+
+    /* Navigation */
+    .sidebar { display: flex; flex-direction: column; gap: 25px; background: #f8f8f7; padding: 29px 13px; }
+    .brand { padding: 0 13px; font-size: 21px; font-weight: 650; letter-spacing: -.8px; }
+    .new-chat { display: flex; align-items: center; gap: 11px; width: 100%; border: 0; border-radius: 10px; padding: 11px 13px; background: transparent; text-align: left; font-size: 14px; color: #303030; }
+    .new-chat:hover { background: #ececeb; }
+    .new-chat:disabled { opacity: .5; cursor: default; }
+    .new-chat svg { width: 19px; height: 19px; }
+
+    /* Conversation */
+    .main { display: flex; flex-direction: column; min-width: 0; height: 100dvh; }
+    .topbar { height: 68px; flex: 0 0 68px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; }
+    .topbar-title { font-size: 16px; font-weight: 600; letter-spacing: -.2px; }
+    .mobile-new { display: none; padding: 7px; border: 0; border-radius: 8px; background: none; color: inherit; }
+    .mobile-new:hover { background: #f1f1f1; }
+    .workspace { min-height: 0; display: flex; flex: 1; flex-direction: column; }
+    .scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-color: #d9d9d9 transparent; }
+    .conversation { width: min(100%, 790px); margin: 0 auto; padding: 24px 30px 20px; }
+    .welcome { padding: 0; text-align: center; }
+    .welcome h1 { font-size: clamp(26px, 4vw, 32px); font-weight: 590; letter-spacing: -1.2px; margin: 0; line-height: 1.3; }
+    .main.empty .workspace { justify-content: center; }
+    .main.empty .scroll { flex: 0 0 auto; overflow: visible; }
+    .main.empty .conversation { padding: 0 24px; }
+    .main.empty .composer-area { padding-top: 28px; padding-bottom: 0; }
+
+    .message { margin: 0 0 32px; }
+    .message.user { display: flex; flex-direction: column; align-items: flex-end; }
+    .message.user .body { max-width: min(78%, 580px); white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px 17px; border-radius: 21px; background: #f3f3f3; font-size: 15px; line-height: 1.65; }
+    .message.assistant { max-width: 100%; }
+    .message.assistant .body { color: #272727; font-size: 15px; line-height: 1.75; overflow-wrap: anywhere; }
+    .body p { margin: 0 0 14px; }
+    .body > :last-child { margin-bottom: 0; }
+    .body h1, .body h2, .body h3, .body h4 { line-height: 1.4; letter-spacing: -.3px; margin: 22px 0 8px; }
+    .body h1 { font-size: 23px; }.body h2 { font-size: 20px; }.body h3 { font-size: 17px; }
+    .body a { color: #295ca6; }
+    .body pre { padding: 17px; margin: 14px 0; max-width: 100%; overflow-x: auto; border-radius: 12px; background: #f6f6f6; font-size: 13px; line-height: 1.6; }
+    .body code { border-radius: 4px; background: #f0f0f0; padding: 2px 4px; font-size: .89em; }
+    .body pre code { background: none; padding: 0; }
+    .body ul, .body ol { padding-left: 23px; }
+    .body li { margin-bottom: 6px; }
+    .body blockquote { margin-left: 0; padding-left: 16px; border-left: 3px solid #dadada; color: #666; }
+    .body table { max-width: 100%; display: block; overflow-x: auto; border-collapse: collapse; }
+    .body td, .body th { border: 1px solid #ddd; padding: 7px 10px; }
+    .images { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 14px; }
+    .images img { border-radius: 12px; max-width: 100%; }
+    .copy { display: inline-flex; align-items: center; gap: 6px; padding: 7px 5px; margin: 9px 0 0 -5px; border: 0; border-radius: 7px; color: #777; background: none; font-size: 12px; }
+    .copy:hover { color: #222; background: #f5f5f5; }
+    .copy svg { width: 16px; height: 16px; }
+    .file-names { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 5px; margin: 0 2px 7px; }
+    .file-name { max-width: 260px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 7px 10px; background: #ededed; border-radius: 9px; color: #555; font-size: 12px; }
+
+    /* Minimal thinking indicator — no connection/debug text. */
+    .thinking { display: inline-flex; gap: 5px; align-items: center; min-height: 25px; }
+    .thinking span { width: 6px; height: 6px; border-radius: 50%; background: #9a9a9a; animation: pulse 1.2s infinite ease-in-out; }
+    .thinking span:nth-child(2) { animation-delay: .15s; }
+    .thinking span:nth-child(3) { animation-delay: .3s; }
+    @keyframes pulse { 0%, 60%, 100% { opacity: .3; } 30% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .thinking span { animation: none; opacity: .6; } }
+
+    /* Composer */
+    .composer-area { width: 100%; flex: 0 0 auto; padding: 12px 24px 26px; background: #fff; }
+    .composer-inner { width: min(100%, 730px); margin: 0 auto; }
+    .composer { border: 1px solid #e4e4e4; border-radius: 23px; background: #f8f8f8; padding: 12px 13px 10px; transition: border-color .12s; }
+    .composer:focus-within, .composer.drag-over { border-color: #b9b9b9; }
+    .composer textarea { display: block; border: 0; outline: none; width: 100%; min-height: 43px; max-height: 200px; resize: none; padding: 9px 7px 3px; background: transparent; font-size: 15px; line-height: 1.5; color: #202020; }
+    .composer textarea::placeholder { color: #929292; }
+    .composer-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+    .icon-btn { display: inline-grid; place-items: center; border: 0; border-radius: 50%; width: 35px; height: 35px; background: transparent; color: #555; }
+    .icon-btn:hover { background: #eaeaea; }
+    .icon-btn:disabled { opacity: .4; cursor: default; }
+    .send-btn { display: inline-grid; place-items: center; width: 35px; height: 35px; border: 0; border-radius: 50%; background: #242424; color: #fff; }
+    .send-btn:hover:not(:disabled) { background: #000; }
+    .send-btn:disabled { background: #dedede; color: #aaa; cursor: default; }
+    .send-btn svg { width: 19px; height: 19px; stroke-width: 2.2; }
+    .attachments { display: flex; gap: 7px; flex-wrap: wrap; padding: 0 0 8px; }
+    .attachments:empty { display: none; }
+    .attachment { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; border: 1px solid #e1e1e1; border-radius: 9px; padding: 6px 7px 6px 10px; background: #fff; font-size: 12px; }
+    .attachment-name { max-width: 195px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .attachment button { background: none; border: 0; display: grid; place-items: center; padding: 1px; border-radius: 4px; color: #777; }
+    .attachment button:hover { background: #ededed; }
+    .attachment svg { width: 15px; height: 15px; }
+    .error { display: none; padding: 0 8px 10px; color: #b34040; font-size: 13px; }
+    .error.visible { display: block; }
+
+    @media (max-width: 730px) {
+      .app { grid-template-columns: minmax(0, 1fr); }
+      .sidebar { display: none; }
+      .topbar { height: 59px; flex-basis: 59px; padding: 0 18px; }
+      .mobile-new { display: inline-grid; place-items: center; }
+      .conversation { padding: 15px 17px 12px; }
+      .composer-area { padding: 8px 11px max(13px, env(safe-area-inset-bottom)); }
+      .main.empty .composer-area { padding-top: 22px; }
+      .message.user .body { max-width: 88%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="Navigation">
+      <div class="brand">Nylo</div>
+      <button class="new-chat" type="button" data-new-chat>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        New chat
+      </button>
+    </aside>
+
+    <main class="main empty" id="main">
+      <header class="topbar">
+        <span class="topbar-title">Nylo</span>
+        <button class="mobile-new" type="button" data-new-chat aria-label="New chat" title="New chat">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </header>
+
+      <div class="workspace">
+        <div class="scroll" id="scroll">
+          <div class="conversation" id="conversation">
+            <div class="welcome" id="welcome"><h1>What can I help with?</h1></div>
+          </div>
+        </div>
+
+        <div class="composer-area">
+          <div class="composer-inner">
+            <div class="error" id="error" role="alert"></div>
+            <div class="composer" id="composer">
+              <div class="attachments" id="attachments"></div>
+              <textarea id="prompt" rows="1" placeholder="Ask anything" aria-label="Message Nylo"></textarea>
+              <div class="composer-actions">
+                <button class="icon-btn" id="attach" type="button" aria-label="Add files" title="Add files">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+                <input id="fileInput" type="file" multiple hidden>
+                <button class="send-btn" id="send" type="button" aria-label="Send message" title="Send message" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const main = $('main');
+    const conversation = $('conversation');
+    const scroll = $('scroll');
+    const prompt = $('prompt');
+    const send = $('send');
+    const fileInput = $('fileInput');
+    const attachments = $('attachments');
+    const error = $('error');
+    const newChatButtons = Array.from(document.querySelectorAll('[data-new-chat]'));
+    let selectedFiles = [];
+    let busy = false;
+
+    function scrollToBottom() {
+      scroll.scrollTop = scroll.scrollHeight;
+    }
+
+    function updateComposer() {
+      prompt.style.height = 'auto';
+      prompt.style.height = `${Math.min(prompt.scrollHeight, 200)}px`;
+      send.disabled = busy || (!prompt.value.trim() && selectedFiles.length === 0);
+    }
+
+    function showError(message = '') {
+      error.textContent = message;
+      error.classList.toggle('visible', Boolean(message));
+    }
+
+    function setBusy(value) {
+      busy = value;
+      prompt.disabled = value;
+      $('attach').disabled = value;
+      newChatButtons.forEach((button) => { button.disabled = value; });
+      updateComposer();
+    }
+
+    function showFiles() {
+      attachments.replaceChildren();
+      selectedFiles.forEach((file, index) => {
+        const chip = document.createElement('span');
+        chip.className = 'attachment';
+        const name = document.createElement('span');
+        name.className = 'attachment-name';
+        name.textContent = file.name;
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.setAttribute('aria-label', `Remove ${file.name}`);
+        remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+        remove.addEventListener('click', () => {
+          selectedFiles.splice(index, 1);
+          showFiles();
+        });
+        chip.append(name, remove);
+        attachments.append(chip);
+      });
+      updateComposer();
+    }
+
+    function addMessage(role, text = '', html = '', images = [], fileNames = []) {
+      main.classList.remove('empty');
+      $('welcome')?.remove();
+
+      const article = document.createElement('article');
+      article.className = `message ${role}`;
+
+      if (fileNames.length) {
+        const files = document.createElement('div');
+        files.className = 'file-names';
+        fileNames.forEach((filename) => {
+          const name = document.createElement('span');
+          name.className = 'file-name';
+          name.textContent = filename;
+          files.append(name);
+        });
+        article.append(files);
+      }
+
+      if (text || html || role === 'assistant') {
+        const body = document.createElement('div');
+        body.className = 'body';
+        if (role === 'assistant' && html) {
+          // HTML from the backend is sanitized before being inserted here.
+          body.innerHTML = html;
+        } else {
+          body.textContent = text;
+        }
+        article.append(body);
+      }
+
+      if (images.length) {
+        const gallery = document.createElement('div');
+        gallery.className = 'images';
+        images.forEach((item) => {
+          if (typeof item.src !== 'string' || !/^(https?:\/\/|data:image\/)/.test(item.src)) return;
+          const img = document.createElement('img');
+          img.src = item.src;
+          img.alt = item.alt || 'Image';
+          img.loading = 'lazy';
+          gallery.append(img);
+        });
+        article.append(gallery);
+      }
+
+      if (role === 'assistant' && text) {
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'copy';
+        copy.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>Copy</span>';
+        copy.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            copy.querySelector('span').textContent = 'Copied';
+          } catch {
+            copy.querySelector('span').textContent = 'Could not copy';
+          }
+        });
+        article.append(copy);
+      }
+
+      conversation.append(article);
+      scrollToBottom();
+      return article;
+    }
+
+    function addThinking() {
+      const article = addMessage('assistant');
+      const dots = document.createElement('div');
+      dots.className = 'thinking';
+      dots.setAttribute('aria-label', 'Generating a reply');
+      dots.innerHTML = '<span></span><span></span><span></span>';
+      article.querySelector('.body').append(dots);
+      return article;
+    }
+
+    async function sendMessage() {
+      if (busy) return;
+      const message = prompt.value.trim();
+      if (!message && selectedFiles.length === 0) return;
+
+      const submittedFiles = selectedFiles.slice();
+      selectedFiles = [];
+      prompt.value = '';
+      showFiles();
+      showError();
+      addMessage('user', message, '', [], submittedFiles.map((file) => file.name));
+      const pending = addThinking();
+      setBusy(true);
+
+      try {
+        const form = new FormData();
+        form.append('message', message);
+        submittedFiles.forEach((file) => form.append('files', file, file.name));
+
+        const response = await fetch('/api/chat', { method: 'POST', body: form });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Request failed');
+
+        pending.remove();
+        addMessage('assistant', result.response || '', result.html || '', result.images || []);
+      } catch (err) {
+        pending.remove();
+        prompt.value = message;
+        selectedFiles = submittedFiles;
+        showFiles();
+        showError('Couldn’t send that. Make sure Chrome is open and you’re signed in, then try again.');
+        // Technical details remain in the Python terminal, not the chat UI.
+        console.error(err);
+      } finally {
+        setBusy(false);
+        prompt.focus();
+        scrollToBottom();
+      }
+    }
+
+    async function newChat() {
+      if (busy) return;
+      setBusy(true);
+      showError();
+      try {
+        const response = await fetch('/api/new-chat', { method: 'POST' });
+        if (!response.ok) throw new Error('Could not start a new chat');
+        conversation.innerHTML = '<div class="welcome" id="welcome"><h1>What can I help with?</h1></div>';
+        main.classList.add('empty');
+        selectedFiles = [];
+        prompt.value = '';
+        showFiles();
+      } catch (err) {
+        showError('Couldn’t start a new chat. Try again.');
+        console.error(err);
+      } finally {
+        setBusy(false);
+        prompt.focus();
+      }
+    }
+
+    prompt.addEventListener('input', updateComposer);
+    prompt.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+    send.addEventListener('click', sendMessage);
+    newChatButtons.forEach((button) => button.addEventListener('click', newChat));
+    $('attach').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      selectedFiles.push(...fileInput.files);
+      fileInput.value = '';
+      showFiles();
+    });
+    $('composer').addEventListener('dragover', (event) => {
+      event.preventDefault();
+      $('composer').classList.add('drag-over');
+    });
+    $('composer').addEventListener('dragleave', () => $('composer').classList.remove('drag-over'));
+    $('composer').addEventListener('drop', (event) => {
+      event.preventDefault();
+      $('composer').classList.remove('drag-over');
+      selectedFiles.push(...event.dataTransfer.files);
+      showFiles();
+    });
+    updateComposer();
+  </script>
+</body>
+</html>
